@@ -1,0 +1,110 @@
+name: Publish radar
+
+# Reads the Notion database, builds Build Your Own Radar with our quadrants and
+# rings, and publishes both to GitHub Pages. Daily, on push, or by hand.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 9 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  # Pinned: the build below patches this exact source.
+  BYOR_REF: 3379de7db36ce86af7b2607429be0b5f888c8120
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      title: ${{ steps.config.outputs.title }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Test the exporter
+        run: python -m unittest discover -s exporter -v
+
+      - name: Read the radar config
+        id: config
+        run: |
+          echo "title=$(jq -r .title radar.config.json)" >> "$GITHUB_OUTPUT"
+          echo "quadrants=$(jq -c .quadrants radar.config.json)" >> "$GITHUB_OUTPUT"
+          echo "rings=$(jq -c .rings radar.config.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Export the radar from Notion
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+        # BYOR titles the radar after the data file's name.
+        run: python exporter/notion_to_radar.py --out "data/${{ steps.config.outputs.title }}.json"
+
+      - uses: actions/checkout@v4
+        with:
+          repository: thoughtworks/build-your-own-radar
+          ref: ${{ env.BYOR_REF }}
+          path: byor
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: byor/.nvmrc
+          cache: npm
+          cache-dependency-path: byor/package-lock.json
+
+      - name: Build the radar
+        working-directory: byor
+        env:
+          QUADRANTS: ${{ steps.config.outputs.quadrants }}
+          RINGS: ${{ steps.config.outputs.rings }}
+          ASSET_PATH: /${{ github.event.repository.name }}/
+        run: |
+          # BYOR renames "Hold" to "Caution" and shows a Thoughtworks notice; keep our ring names.
+          sed -i 's/normalizeRingNameHoldToCaution: true/normalizeRingNameHoldToCaution: false/g' src/config.js
+          if grep -q 'normalizeRingNameHoldToCaution: true' src/config.js; then
+            echo "::error::the Hold->Caution toggle is still on; src/config.js changed upstream" && exit 1
+          fi
+          # index.html links its images from the site root, which ASSET_PATH does not
+          # reach; served from /<repo>/ the logo would 404.
+          sed -i 's#src="/images/#src="images/#g' src/index.html
+          if grep -q 'src="/images/' src/index.html; then
+            echo "::error::index.html still links images from the site root" && exit 1
+          fi
+          npm ci --no-audit --no-fund
+          npm run build:prod
+          cp ../data/*.json dist/
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: byor/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Embed URL
+        env:
+          PAGE: ${{ steps.deployment.outputs.page_url }}
+          TITLE: ${{ needs.build.outputs.title }}
+        run: |
+          data=$(jq -rn --arg u "${PAGE}${TITLE}.json" '$u | @uri')
+          echo "Embed in Notion: ${PAGE}?documentId=${data}" | tee -a "$GITHUB_STEP_SUMMARY"

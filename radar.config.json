@@ -1,0 +1,5 @@
+{
+  "title": "Bithippie Tech Radar",
+  "quadrants": ["Techniques", "Platforms", "Tools", "Languages & Frameworks"],
+  "rings": ["Adopt", "Trial", "Assess", "Hold"]
+}

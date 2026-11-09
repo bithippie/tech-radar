@@ -11,7 +11,7 @@ Built with Thoughtworks' [Build Your Own Radar](https://github.com/thoughtworks/
 
 ```
 Notion database "Tech Radar"  ──(daily Action)──►  exporter/notion_to_radar.py
-        (rows with Publicar ✓)                              │
+        (rows with Publish ✓)                                │
                                                             ▼
                                      "<title>.json"  +  BYOR build (pinned SHA)
                                                             │
@@ -19,7 +19,7 @@ Notion database "Tech Radar"  ──(daily Action)──►  exporter/notion_to_
                                           GitHub Pages  ──►  embedded in Notion
 ```
 
-- **Edit the radar in Notion.** Only rows with `Publicar` checked are published.
+- **Edit the radar in Notion.** Only rows with `Publish` checked are published.
 - **Publishing** runs weekdays at 09:00 UTC, on every push to `main`, or by hand
   (Actions → Publish radar → Run workflow).
 - **A bad row fails the run** and names the row. BYOR would otherwise drop a blip whose
@@ -27,14 +27,14 @@ Notion database "Tech Radar"  ──(daily Action)──►  exporter/notion_to_
 
 ## The Notion database
 
-| Property    | Type      | Values |
-|-------------|-----------|--------|
-| `Name`      | title     | the blip, unique |
-| `Quadrante` | select    | Techniques, Platforms, Tools, Languages & Frameworks |
-| `Anel`      | select    | Adopt, Trial, Assess, Hold |
-| `Movimento` | select    | New, Moved In, Moved Out, No Change (empty = No Change) |
-| `Descrição` | text      | shown on the radar; bold, italic and links are kept |
-| `Publicar`  | checkbox  | only checked rows are published |
+| Property      | Type      | Values |
+|---------------|-----------|--------|
+| `Name`        | title     | the blip, unique |
+| `Quadrant`    | select    | Techniques, Platforms, Tools, Languages & Frameworks |
+| `Ring`        | select    | Adopt, Trial, Assess, Hold |
+| `Movement`    | select    | New, Moved In, Moved Out, No Change (empty = No Change) |
+| `Description` | text      | shown on the radar; bold, italic and links are kept |
+| `Publish`     | checkbox  | only checked rows are published |
 
 Quadrants, rings and the radar title live in `radar.config.json`; the build and the
 exporter both read it.

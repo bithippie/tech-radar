@@ -24,13 +24,13 @@ CONFIG_PATH = Path(__file__).resolve().parent.parent / "radar.config.json"
 
 # Notion property names, as the database defines them.
 PROP_NAME = "Name"
-PROP_QUADRANT = "Quadrante"
-PROP_RING = "Anel"
-PROP_MOVEMENT = "Movimento"
-PROP_DESCRIPTION = "Descrição"
-PROP_PUBLISH = "Publicar"
+PROP_QUADRANT = "Quadrant"
+PROP_RING = "Ring"
+PROP_MOVEMENT = "Movement"
+PROP_DESCRIPTION = "Description"
+PROP_PUBLISH = "Publish"
 
-# Notion "Movimento" option -> BYOR "status".
+# Notion "Movement" option -> BYOR "status".
 MOVEMENTS = {
     "New": "New",
     "Moved In": "Moved In",
@@ -136,7 +136,7 @@ def to_blips(rows: list[dict], config: dict) -> list[dict]:
     if problems:
         raise ExportError("rows that would not appear on the radar:\n  " + "\n  ".join(problems))
     if not blips:
-        raise ExportError("no rows have 'Publicar' checked; refusing to publish an empty radar")
+        raise ExportError("no rows have 'Publish' checked; refusing to publish an empty radar")
 
     blips.sort(key=lambda b: (quadrants.index(b["quadrant"]), rings.index(b["ring"]), b["name"].lower()))
     return blips

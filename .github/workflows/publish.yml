@@ -43,6 +43,7 @@ jobs:
           echo "title=$(jq -r .title radar.config.json)" >> "$GITHUB_OUTPUT"
           echo "subtitle=$(jq -r .subtitle radar.config.json)" >> "$GITHUB_OUTPUT"
           echo "banner=$(jq -r .bannerColor radar.config.json)" >> "$GITHUB_OUTPUT"
+          echo "markheight=$(jq -r .markHeight radar.config.json)" >> "$GITHUB_OUTPUT"
           echo "quadrants=$(jq -c .quadrants radar.config.json)" >> "$GITHUB_OUTPUT"
           echo "rings=$(jq -c .rings radar.config.json)" >> "$GITHUB_OUTPUT"
 
@@ -74,6 +75,7 @@ jobs:
           TITLE: ${{ steps.config.outputs.title }}
           SUBTITLE: ${{ steps.config.outputs.subtitle }}
           BANNER: ${{ steps.config.outputs.banner }}
+          MARK_HEIGHT: ${{ steps.config.outputs.markheight }}
         run: |
           # BYOR renames "Hold" to "Caution" and shows a Thoughtworks notice; keep our ring names.
           sed -i 's/normalizeRingNameHoldToCaution: true/normalizeRingNameHoldToCaution: false/g' src/config.js
@@ -104,18 +106,22 @@ jobs:
           # The top-left mark is BYOR's "Powered by <Thoughtworks logo>". This is our radar, so
           # it carries our logo. The AGPL asks for copyright and licence notices in the source
           # and for the source to be obtainable, not for a vendor mark in the interface.
-          cp ../assets/bithippie-logo.png src/images/bithippie-logo.png
+          # The mark is the emblem alone, not the full lockup. The lockup only exists at
+          # 450x125, so anything above roughly 210 CSS px is upscaled on a 2x screen and
+          # visibly soft. The emblem is published at 512 square, so it stays sharp at any
+          # size we would want, and the wordmark is not lost: "BitHippie Tech Radar" reads
+          # in full directly below it.
+          cp ../assets/bithippie-emblem-256.png src/images/bithippie-emblem.png
           # The src path is matched with an optional leading slash because the patch above has
           # already rewritten it; anchoring on "/images/" here silently matches nothing.
-          perl -0777 -i -pe 's{<span>Powered by</span>\s*\n\s*<a href="https://www\.thoughtworks\.com"><img src="/?images/tw-logo\.png" alt="Thoughtworks logo" /></a>}{<a href="https://bithippie.com"><img src="images/bithippie-logo.png" alt="BitHippie" /></a>}s' src/index.html
-          if ! grep -q 'bithippie-logo.png' src/index.html; then
+          perl -0777 -i -pe 's{<span>Powered by</span>\s*\n\s*<a href="https://www\.thoughtworks\.com"><img src="/?images/tw-logo\.png" alt="Thoughtworks logo" /></a>}{<a href="https://bithippie.com"><img src="images/bithippie-emblem.png" alt="BitHippie" /></a>}s' src/index.html
+          if ! grep -q 'bithippie-emblem.png' src/index.html; then
             echo "::error::the header still carries BYOR's mark; src/index.html changed upstream" && exit 1
           fi
-          # BYOR sizes the header mark at 200px wide, which suited its own near-square logo.
-          # Ours is 450x125, so at that width it stands only 55px tall and reads as an
-          # afterthought. The rule goes in at the end of the body, after the bundle's own
-          # stylesheet, so it wins on order rather than on !important.
-          perl -0777 -i -pe 's{\n(\s*)</body>}{\n$1  <style>/* bithippie */ .input-sheet__logo a img{width:min(260px,65vw)}</style>\n$1</body>}s' src/index.html
+          # BYOR sizes the header mark by width, which suited its own wide logo. Ours is
+          # square, so it is sized by height instead. The rule goes in at the end of the body,
+          # after the bundle's own stylesheet, so it wins on order rather than on !important.
+          perl -0777 -i -pe 's{\n(\s*)</body>}{\n$1  <style>/* bithippie */ .input-sheet__logo a img{height:'"${MARK_HEIGHT}"';width:auto}</style>\n$1</body>}s' src/index.html
           if ! grep -q '/\* bithippie \*/' src/index.html; then
             echo "::error::the logo sizing rule was not inserted; src/index.html changed upstream" && exit 1
           fi
@@ -163,10 +169,10 @@ jobs:
           fi
           # The build copies src/images, but prove it rather than trust it: a missing logo is a
           # 404 nobody notices until someone opens the radar.
-          if [ ! -s dist/images/bithippie-logo.png ]; then
-            cp ../assets/bithippie-logo.png dist/images/bithippie-logo.png
+          if [ ! -s dist/images/bithippie-emblem.png ]; then
+            cp ../assets/bithippie-emblem-256.png dist/images/bithippie-emblem.png
           fi
-          [ -s dist/images/bithippie-logo.png ] || { echo "::error::the logo is not in dist/images"; exit 1; }
+          [ -s dist/images/bithippie-emblem.png ] || { echo "::error::the mark is not in dist/images"; exit 1; }
 
       - uses: actions/configure-pages@v5
 

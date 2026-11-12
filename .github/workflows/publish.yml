@@ -69,11 +69,18 @@ jobs:
           QUADRANTS: ${{ steps.config.outputs.quadrants }}
           RINGS: ${{ steps.config.outputs.rings }}
           ASSET_PATH: /${{ github.event.repository.name }}/
+          TITLE: ${{ steps.config.outputs.title }}
         run: |
           # BYOR renames "Hold" to "Caution" and shows a Thoughtworks notice; keep our ring names.
           sed -i 's/normalizeRingNameHoldToCaution: true/normalizeRingNameHoldToCaution: false/g' src/config.js
           if grep -q 'normalizeRingNameHoldToCaution: true' src/config.js; then
             echo "::error::the Hold->Caution toggle is still on; src/config.js changed upstream" && exit 1
+          fi
+          # The radar keeps BYOR's own name as its main heading and shows ours only as a
+          # subtitle, taken from the data file name. Lead with ours in both places.
+          sed -i "s#<h1 class=\"hero-banner__title-text\">Build your own Radar</h1>#<h1 class=\"hero-banner__title-text\">${TITLE}</h1>#" src/index.html
+          if grep -q 'hero-banner__title-text">Build your own Radar<' src/index.html; then
+            echo "::error::the hero banner still carries BYOR's title; src/index.html changed upstream" && exit 1
           fi
           # index.html links its images from the site root, which ASSET_PATH does not
           # reach; served from /<repo>/ the logo would 404.

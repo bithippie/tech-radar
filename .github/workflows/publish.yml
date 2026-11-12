@@ -107,6 +107,14 @@ jobs:
           if ! grep -q 'bithippie-logo.png' src/index.html; then
             echo "::error::the header still carries BYOR's mark; src/index.html changed upstream" && exit 1
           fi
+          # BYOR sizes the header mark at 200px wide, which suited its own near-square logo.
+          # Ours is 450x125, so at that width it stands only 55px tall and reads as an
+          # afterthought. The rule goes in at the end of the body, after the bundle's own
+          # stylesheet, so it wins on order rather than on !important.
+          perl -0777 -i -pe 's{\n(\s*)</body>}{\n$1  <style>/* bithippie */ .input-sheet__logo a img{width:min(320px,70vw)}</style>\n$1</body>}s' src/index.html
+          if ! grep -q '/\* bithippie \*/' src/index.html; then
+            echo "::error::the logo sizing rule was not inserted; src/index.html changed upstream" && exit 1
+          fi
           # "Generate new Radar" sends the visitor to the upload form, which is meaningless
           # here: this radar is built from Notion by this workflow, not from a file someone
           # pastes in. "Print this Radar" stays.

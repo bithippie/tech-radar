@@ -88,9 +88,32 @@ jobs:
           if grep -q 'src="/images/' src/index.html; then
             echo "::error::index.html still links images from the site root" && exit 1
           fi
+          # The footer paragraph describes Thoughtworks' own hosted service: its terms of use,
+          # and a privacy policy about personal data "in your public Google Sheet". None of it
+          # is true of a self-hosted radar read from Notion, so showing it would misinform
+          # whoever reads this page. Drop the paragraph; the AGPL source link it also carried
+          # is given on the radar's Notion page instead.
+          perl -0777 -i -pe 's{\n\s*<p class="agree-terms">.*?</p>}{}s' src/index.html
+          if grep -q 'agree-terms' src/index.html; then
+            echo "::error::the terms-of-use paragraph is still in index.html" && exit 1
+          fi
+          # The top-left mark is BYOR's "Powered by <Thoughtworks logo>". This is our radar, so
+          # it carries our logo. The AGPL asks for copyright and licence notices in the source
+          # and for the source to be obtainable, not for a vendor mark in the interface.
+          cp ../assets/bithippie-logo.png src/images/bithippie-logo.png
+          perl -0777 -i -pe 's{<span>Powered by</span>\s*\n\s*<a href="https://www\.thoughtworks\.com"><img src="/images/tw-logo\.png" alt="Thoughtworks logo" /></a>}{<a href="https://bithippie.com"><img src="images/bithippie-logo.png" alt="BitHippie" /></a>}s' src/index.html
+          if ! grep -q 'bithippie-logo.png' src/index.html; then
+            echo "::error::the header still carries BYOR's mark; src/index.html changed upstream" && exit 1
+          fi
           npm ci --no-audit --no-fund
           npm run build:prod
           cp ../data/*.json dist/
+          # The build copies src/images, but prove it rather than trust it: a missing logo is a
+          # 404 nobody notices until someone opens the radar.
+          if [ ! -s dist/images/bithippie-logo.png ]; then
+            cp ../assets/bithippie-logo.png dist/images/bithippie-logo.png
+          fi
+          [ -s dist/images/bithippie-logo.png ] || { echo "::error::the logo is not in dist/images"; exit 1; }
 
       - uses: actions/configure-pages@v5
 

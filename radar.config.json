@@ -1,5 +1,7 @@
 {
   "title": "BitHippie Tech Radar",
+  "subtitle": "What we adopt, trial, assess and hold · Edition 1, November 2026",
+  "bannerColor": "#5f7036",
   "quadrants": ["Techniques", "Platforms", "Tools", "Languages & Frameworks"],
   "rings": ["Adopt", "Trial", "Assess", "Hold"]
 }

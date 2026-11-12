@@ -1,12 +1,16 @@
 name: Publish radar
 
 # Reads the Notion database, builds Build Your Own Radar with our quadrants and
-# rings, and publishes both to GitHub Pages. Daily, on push, or by hand.
+# rings, and publishes both to GitHub Pages. On push, on a schedule, or by hand.
+#
+# 11:00 UTC is 06:00 in Boston, where BitHippie is. Cron here is always UTC and does
+# not follow daylight saving, so this lands at 07:00 Boston time from March to
+# November. Moving it to 10:00 UTC would invert that: 05:00 in winter, 06:00 in summer.
 on:
   push:
     branches: [main]
   schedule:
-    - cron: "0 9 * * 1-5"
+    - cron: "0 11 * * 1-5"
   workflow_dispatch:
 
 permissions:

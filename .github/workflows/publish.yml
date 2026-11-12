@@ -107,9 +107,25 @@ jobs:
           if ! grep -q 'bithippie-logo.png' src/index.html; then
             echo "::error::the header still carries BYOR's mark; src/index.html changed upstream" && exit 1
           fi
+          # "Generate new Radar" sends the visitor to the upload form, which is meaningless
+          # here: this radar is built from Notion by this workflow, not from a file someone
+          # pastes in. "Print this Radar" stays.
+          perl -0777 -i -pe "s{\n\s*buttonsRow\n\s*\.append\('a'\)\n.*?\.text\('Generate new Radar'\)\n}{\n}s" src/graphing/components/buttons.js
+          if grep -q 'Generate new Radar' src/graphing/components/buttons.js; then
+            echo "::error::the Generate new Radar button is still there; buttons.js changed upstream" && exit 1
+          fi
           npm ci --no-audit --no-fund
           npm run build:prod
           cp ../data/*.json dist/
+          # BYOR hardcodes "/images/..." in its stylesheet and bundle, which resolves to the
+          # site root. Served from a project page at /tech-radar/ every one of them 404s, and
+          # the build does not notice: the blip movement icons and the banner simply vanish.
+          # ASSET_PATH only reaches assets webpack itself emitted, not these string literals.
+          sed -i "s|(/images/|(${ASSET_PATH}images/|g" dist/*.css
+          sed -i "s|\"/images/|\"${ASSET_PATH}images/|g" dist/*.js
+          if grep -ho '(/images/' dist/*.css | grep -q . || grep -ho '"/images/' dist/*.js | grep -q .; then
+            echo "::error::absolute /images/ references survived in the built output" && exit 1
+          fi
           # The build copies src/images, but prove it rather than trust it: a missing logo is a
           # 404 nobody notices until someone opens the radar.
           if [ ! -s dist/images/bithippie-logo.png ]; then

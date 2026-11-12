@@ -101,7 +101,9 @@ jobs:
           # it carries our logo. The AGPL asks for copyright and licence notices in the source
           # and for the source to be obtainable, not for a vendor mark in the interface.
           cp ../assets/bithippie-logo.png src/images/bithippie-logo.png
-          perl -0777 -i -pe 's{<span>Powered by</span>\s*\n\s*<a href="https://www\.thoughtworks\.com"><img src="/images/tw-logo\.png" alt="Thoughtworks logo" /></a>}{<a href="https://bithippie.com"><img src="images/bithippie-logo.png" alt="BitHippie" /></a>}s' src/index.html
+          # The src path is matched with an optional leading slash because the patch above has
+          # already rewritten it; anchoring on "/images/" here silently matches nothing.
+          perl -0777 -i -pe 's{<span>Powered by</span>\s*\n\s*<a href="https://www\.thoughtworks\.com"><img src="/?images/tw-logo\.png" alt="Thoughtworks logo" /></a>}{<a href="https://bithippie.com"><img src="images/bithippie-logo.png" alt="BitHippie" /></a>}s' src/index.html
           if ! grep -q 'bithippie-logo.png' src/index.html; then
             echo "::error::the header still carries BYOR's mark; src/index.html changed upstream" && exit 1
           fi
